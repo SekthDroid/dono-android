@@ -21,23 +21,24 @@ import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ListAdapter;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import com.daimajia.swipe.adapters.BaseSwipeAdapter;
-import com.dono.psakkos.dono.core.PersistableLabels;
+
+import java.util.List;
 
 public class LabelAdapter extends BaseSwipeAdapter
 {
 
     private Context mContext;
-    private String[] labels;
+    private List<String> labels;
+    private OnLabelRemoveClickListener onLabelRemoveClickListener;
 
-    public LabelAdapter(Context mContext, String[] labels)
+    public LabelAdapter(Context mContext, List<String> labels, OnLabelRemoveClickListener onLabelRemoveClickListener)
     {
         this.mContext = mContext;
         this.labels = labels;
+        this.onLabelRemoveClickListener = onLabelRemoveClickListener;
     }
 
     @Override
@@ -56,14 +57,9 @@ public class LabelAdapter extends BaseSwipeAdapter
             @Override
             public void onClick(View view)
             {
-                PersistableLabels persistableLabels = new PersistableLabels(mContext);
-                persistableLabels.deleteAt(position);
-
-                View parent = (View) view.getParent().getParent().getParent();
-                ListView labelsListView = (ListView)parent.findViewById(R.id.labelsListView);
-
-                ListAdapter listAdapter = new LabelAdapter(view.getContext(), persistableLabels.getAll());
-                labelsListView.setAdapter(listAdapter);
+                if (onLabelRemoveClickListener != null){
+                    onLabelRemoveClickListener.onLabelRemoveClick(position);
+                }
             }
         });
 
@@ -76,24 +72,28 @@ public class LabelAdapter extends BaseSwipeAdapter
     public void fillValues(int position, View convertView)
     {
         TextView t = (TextView)convertView.findViewById(R.id.labelText);
-        t.setText(this.labels[position]);
+        t.setText(this.labels.get(position));
     }
 
     @Override
     public int getCount()
     {
-        return labels.length;
+        return labels.size();
     }
 
     @Override
     public Object getItem(int position)
     {
-        return labels[position];
+        return labels.get(position);
     }
 
     @Override
     public long getItemId(int position)
     {
         return position;
+    }
+
+    public interface OnLabelRemoveClickListener{
+        void onLabelRemoveClick(int position);
     }
 }

@@ -20,7 +20,6 @@ import android.app.Activity;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.Context;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.NavigationView;
@@ -34,7 +33,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.dono.psakkos.dono.core.PersistableLabels;
 import com.dono.psakkos.dono.fragments.AddLabelFragment;
@@ -46,7 +44,7 @@ import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.common.api.GoogleApiClient;
 
 public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener
+        implements NavigationView.OnNavigationItemSelectedListener, LabelsFragment.OnLabelRemovedListener
 {
     /**
      * ATTENTION: This was auto-generated to implement the App Indexing API.
@@ -296,5 +294,12 @@ public class MainActivity extends AppCompatActivity
         );
         AppIndex.AppIndexApi.end(client, viewAction);
         client.disconnect();
+    }
+
+    @Override
+    public void onLabelDatasourceChanged() {
+        if (new PersistableLabels(this).getAll().length == 0){
+            showLonelyFragment();
+        }
     }
 }

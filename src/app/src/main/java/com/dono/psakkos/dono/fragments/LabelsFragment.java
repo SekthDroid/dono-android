@@ -16,6 +16,7 @@
 
 package com.dono.psakkos.dono.fragments;
 
+import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -24,23 +25,62 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ListAdapter;
 import android.widget.ListView;
 
-import com.dono.psakkos.dono.core.Dono;
+import com.daimajia.swipe.adapters.BaseSwipeAdapter;
 import com.dono.psakkos.dono.LabelAdapter;
+import com.dono.psakkos.dono.R;
+import com.dono.psakkos.dono.core.Dono;
 import com.dono.psakkos.dono.core.PersistableKey;
 import com.dono.psakkos.dono.core.PersistableLabels;
-import com.dono.psakkos.dono.R;
 
-public class LabelsFragment extends DonoFragment
-{
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import static com.dono.psakkos.dono.R.id.labelsListView;
+
+public class LabelsFragment extends DonoFragment implements LabelAdapter.OnLabelRemoveClickListener {
     // Milliseconds after which the row's background color will be restored
     public static int ROW_REFRESH_MILLISECONDS = 100;
+
+    private PersistableLabels mPersistableLabels;
+    private List<String> mAdapterItems;
+    private BaseSwipeAdapter mLabelListAdapter;
+    private OnLabelRemovedListener mListener;
+    private ListView mLabelsListView;
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        attachListener(context);
+    }
+
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+        attachListener(activity);
+    }
+
+    private void attachListener(Context activity) {
+        try {
+            mListener = (OnLabelRemovedListener)activity;
+        }catch (ClassCastException ex){
+            Log.d("LabelsFragment", "Your activity should implements OnLabelRemovedListener");
+            ex.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        mPersistableLabels = new PersistableLabels(getActivity());
+    }
 
     @Nullable
     @Override
@@ -50,12 +90,9 @@ public class LabelsFragment extends DonoFragment
 
         View view = inflater.inflate(R.layout.labels_fragment, container, false);
 
-        String[] labels = new PersistableLabels(view.getContext()).getAll();
-        final ListAdapter listAdapter = new LabelAdapter(view.getContext(), labels);
-        final ListView labelsListView = (ListView)view.findViewById(R.id.labelsListView);
-        labelsListView.setAdapter(listAdapter);
+        mLabelsListView = (ListView)view.findViewById(labelsListView);
 
-        labelsListView.setOnItemClickListener(
+        mLabelsListView.setOnItemClickListener(
                 new AdapterView.OnItemClickListener(){
                     @Override
                     public void onItemClick(AdapterView<?> parent, View view, int position, long id)
@@ -98,13 +135,21 @@ public class LabelsFragment extends DonoFragment
         return view;
     }
 
+    @Override
+    public void onViewCreated(View view, Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        mAdapterItems = new ArrayList<>(Arrays.asList(new PersistableLabels(getActivity()).getAll()));
+        mLabelListAdapter = new LabelAdapter(getActivity(), mAdapterItems, this);
+        mLabelsListView.setAdapter(mLabelListAdapter);
+    }
+
     public void restoreCellColors() {
         new Handler(Looper.getMainLooper()).postDelayed(new Runnable()
         {
             @Override
             public void run()
             {
-                ListView list = (ListView) getView().findViewById(R.id.labelsListView);
+                ListView list = (ListView) getView().findViewById(labelsListView);
 
                 for (int i = 0; i < list.getChildCount(); i++)
                 {
@@ -112,6 +157,24 @@ public class LabelsFragment extends DonoFragment
                     child.setBackgroundColor(Color.WHITE);
                 }
             }
-        }, LabelsFragment.ROW_REFRESH_MILLISECONDS);
+        }, ROW_REFRESH_MILLISECONDS);
+    }
+
+    @Override
+    public void onLabelRemoveClick(int position) {
+        mPersistableLabels.deleteAt(position);
+
+        mAdapterItems.clear();
+        mAdapterItems.addAll(Arrays.asList(mPersistableLabels.getAll()));
+        mLabelListAdapter.notifyDataSetChanged();
+        mLabelListAdapter.closeAllItems();
+
+        if (mListener != null){
+            mListener.onLabelDatasourceChanged();
+        }
+    }
+
+    public interface OnLabelRemovedListener{
+        void onLabelDatasourceChanged();
     }
 }
